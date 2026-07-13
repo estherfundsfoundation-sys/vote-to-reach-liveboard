@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080713" />
+    <meta name="description" content="The official Vote to REACH Scholarship Competition live rankings board." />
+    <title>Vote to REACH | Live Rankings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="sky" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="orbit orbit-one" aria-hidden="true"></div>
+    <div class="orbit orbit-two" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Vote to REACH home">
+        <span class="brand-wordmark">r.e.a.c.h.</span>
+        <span class="brand-subtitle">by Esther Funds Foundation</span>
+      </a>
+      <a class="header-link" href="#how-it-works">How it works <span aria-hidden="true">↓</span></a>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">2026 SCHOLARSHIP COMPETITION</p>
+        <h1 id="page-title">Vote to <span>REACH.</span></h1>
+        <p class="hero-copy">The live rankings board for students reaching toward their educational future. Every verified vote helps power scholarship opportunity.</p>
+        <div class="live-status" id="live-status" role="status" aria-live="polite">
+          <span class="pulse" aria-hidden="true"></span>
+          <span id="status-copy">Loading verified vote totals…</span>
+        </div>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#rankings">See live rankings <span aria-hidden="true">↓</span></a>
+          <a class="button button-secondary" href="#vote">Cast your vote <span aria-hidden="true">↗</span></a>
+        </div>
+        <p class="refresh-note" id="refresh-note">Results refresh securely throughout the day.</p>
+      </section>
+
+      <section class="stats" aria-label="Competition totals">
+        <article>
+          <span class="stat-label">Verified votes</span>
+          <strong id="total-votes">—</strong>
+        </article>
+        <article>
+          <span class="stat-label">Students in the running</span>
+          <strong id="candidate-count">—</strong>
+        </article>
+        <article>
+          <span class="stat-label">Prize opportunity</span>
+          <strong>Up to $2K</strong>
+        </article>
+      </section>
+
+      <section class="rankings" id="rankings" aria-labelledby="rankings-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">THE LEADERBOARD</p>
+            <h2 id="rankings-title">REACH <span>rankings</span></h2>
+          </div>
+          <p class="section-caption">Only completed and verified votes appear here. This board never displays voter names, emails, or payment details.</p>
+        </div>
+        <div class="podium" id="podium" aria-live="polite"></div>
+        <div class="candidate-grid" id="candidate-grid" aria-live="polite">
+          <div class="loading-card"><span class="loader" aria-hidden="true"></span><p>Connecting to the secure vote counter…</p></div>
+        </div>
+      </section>
+
+      <section class="vote-panel" id="vote" aria-labelledby="vote-title">
+        <div class="vote-panel-copy">
+          <p class="eyebrow">MAKE YOUR VOTE COUNT</p>
+          <h2 id="vote-title">Your vote opens a door.</h2>
+          <p>$1.50 = one vote. Votes are made only through the official secure ballots and then appear on this board after verification.</p>
+        </div>
+        <div class="ballot-actions">
+          <a class="ballot-card" href="https://pci.jotform.com/form/261923509398165" target="_blank" rel="noopener noreferrer">
+            <span class="ballot-icon">01</span>
+            <span><b>Official Ballot A</b><small>Open secure voting form</small></span>
+            <i aria-hidden="true">↗</i>
+          </a>
+          <a class="ballot-card" href="https://pci.jotform.com/form/261923179002150" target="_blank" rel="noopener noreferrer">
+            <span class="ballot-icon">02</span>
+            <span><b>Official Ballot B</b><small>Open secure voting form</small></span>
+            <i aria-hidden="true">↗</i>
+          </a>
+        </div>
+      </section>
+
+      <section class="how-it-works" id="how-it-works" aria-labelledby="how-title">
+        <div>
+          <p class="eyebrow">CLEAR. FAIR. VERIFIED.</p>
+          <h2 id="how-title">How the board works</h2>
+        </div>
+        <ol>
+          <li><span>1</span><div><b>Vote securely</b><p>Votes are submitted through the official Jotform ballot—not on this page.</p></div></li>
+          <li><span>2</span><div><b>Verify each vote</b><p>The board counts completed payment records only, keeping the competition fair.</p></div></li>
+          <li><span>3</span><div><b>Watch the impact</b><p>Rankings update on a secure schedule and protect every voter’s personal information.</p></div></li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <div><span class="brand-wordmark">r.e.a.c.h.</span><p>Every Future Fulfilled.</p></div>
+      <p>© <span id="year"></span> Esther Funds Foundation</p>
+    </footer>
+    <script src="assets/app.js"></script>
+  </body>
+</html>
