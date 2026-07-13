@@ -164,22 +164,6 @@ function collectProductSelections(value, productMap, output, context = '', depth
   }
 }
 
-function safeShape(value, productLabels, key = '', depth = 0) {
-  if (depth > 7) return '<max-depth>';
-  if (PRIVATE_PAYMENT_KEY.test(key)) return '<redacted>';
-  const parsed = parseJson(value);
-  if (parsed !== value) return safeShape(parsed, productLabels, key, depth + 1);
-  if (Array.isArray(value)) return value.slice(0, 5).map(item => safeShape(item, productLabels, key, depth + 1));
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).slice(0, 40).map(([childKey, child]) => [childKey, safeShape(child, productLabels, childKey, depth + 1)]));
-  }
-  if (typeof value === 'string') {
-    const matches = productLabels.filter(label => value.toLowerCase().includes(String(label).toLowerCase()));
-    return matches.length ? { matchedProducts: matches } : '<string>';
-  }
-  return `<${typeof value}>`;
-}
-
 function voteSelections(submission, productMap) {
   const answers = submission.answers || {};
   const selections = [];
@@ -227,22 +211,6 @@ module.exports = async function handler(req, res) {
       Promise.all(formIds.map(id => allSubmissions(id, apiKey))),
       Promise.all(formIds.map(id => formProductMap(id, apiKey)))
     ]);
-    if (String(req.query?.schema || '') === 'products') {
-      return send(res, 200, {
-        forms: formIds.map((id, index) => {
-          const productEntries = [...maps[index].entries()];
-          const labels = productEntries.map(([, label]) => label);
-          return {
-            id,
-            submissionCount: batches[index].length,
-            products: productEntries,
-            paymentAnswerShapes: batches[index].slice(0, 2).map(submission => Object.values(submission.answers || {})
-              .filter(answer => /vote|payment|product|candidate|scholarship/i.test(`${answer.text || ''} ${answer.name || ''} ${answer.type || ''}`))
-              .map(answer => ({ text: answer.text, name: answer.name, type: answer.type, answer: safeShape(answer.answer, labels) })))
-          };
-        })
-      });
-    }
     const candidates = new Map();
     for (const [formIndex, submissions] of batches.entries()) for (const submission of submissions) {
       const selections = voteSelections(submission, maps[formIndex]);
