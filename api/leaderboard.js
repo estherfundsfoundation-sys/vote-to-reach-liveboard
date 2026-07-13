@@ -138,7 +138,9 @@ function collectProductSelections(value, productMap, output, context = '', depth
   const explicitLabel = value.name || value.productName || value.product_name || value.title || value.label || '';
   const mappedLabel = productMap.get(String(embeddedId)) || [...productMap.values()].find(label => sameLabel(label, explicitLabel));
   const productContext = /product|item|cart|paymentarray|line/i.test(context);
-  const label = mappedLabel || (productContext && explicitLabel && (value.quantity || value.qty || value.price || embeddedId) ? explicitLabel : '');
+  const hasProductIdentity = Boolean(value.pid || value.productId || value.product_id || value.item_id);
+  const looksLikeSelectedProduct = hasProductIdentity && explicitLabel && (value.quantity || value.qty || value.price || value.selected);
+  const label = mappedLabel || (looksLikeSelectedProduct || (productContext && explicitLabel && (value.quantity || value.qty || value.price || embeddedId)) ? explicitLabel : '');
   if (label && !PRIVATE_PAYMENT_TEXT.test(String(label))) {
     output.push({
       name: candidateNameFromText(label),
