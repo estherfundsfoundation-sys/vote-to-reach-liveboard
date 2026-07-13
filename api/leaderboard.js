@@ -6,6 +6,8 @@ const DEFAULT_FORM_IDS = ['261923509398165', '261923179002150'];
 const PAID_STATUSES = new Set(['PAID', 'COMPLETED', 'COMPLETE', 'SUCCESS', 'SUCCEEDED', 'APPROVED', 'CAPTURED']);
 const FAILED_PAYMENT_STATUSES = new Set(['UNPAID', 'PENDING', 'INCOMPLETE', 'FAILED', 'DECLINED', 'CANCELED', 'CANCELLED', 'VOIDED', 'REFUNDED']);
 const DASH_SEPARATOR = /\s+(?:\u2014|\u2013|-)\s+/;
+const PRIVATE_PAYMENT_TEXT = /(?:transaction|order[_\s-]?id|payment[_\s-]?id|paymentarray|charge[_\s-]?id|receipt|client[_\s-]?secret|customer[_\s-]?id|stripe|paypal|\bpi_[a-z0-9]+)/i;
+const PRIVATE_PAYMENT_KEY = /(?:transaction|order[_-]?id|payment[_-]?id|charge[_-]?id|receipt|client[_-]?secret|customer[_-]?id)/i;
 
 function send(res, status, body) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -102,7 +104,7 @@ function isVerifiedSubmission(submission, selections) {
 
 function candidateNameFromText(value) {
   const cleaned = String(value || '').replace(/\s+/g, ' ').trim();
-  if (!cleaned || /^\$?\d/.test(cleaned) || cleaned.length < 4) return null;
+  if (!cleaned || PRIVATE_PAYMENT_TEXT.test(cleaned) || /^\$?\d/.test(cleaned) || cleaned.length < 4) return null;
   // Product labels are formatted as “Name — School” in the official ballots.
   const name = cleaned.split(DASH_SEPARATOR)[0].trim();
   return name.length >= 3 && name.length < 100 ? name : null;
@@ -118,29 +120,73 @@ function countQuantity(value) {
   return Number.isFinite(direct) && direct > 0 ? direct : 1;
 }
 
+function sameLabel(left, right) {
+  return String(left || '').replace(/\s+/g, ' ').trim().toLowerCase() === String(right || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function collectProductSelections(value, productMap, output, context = '', depth = 0) {
+  if (depth > 8) return;
+  value = parseJson(value);
+  if (!value) return;
+  if (Array.isArray(value)) {
+    value.forEach(item => collectProductSelections(item, productMap, output, context, depth + 1));
+    return;
+  }
+  if (typeof value !== 'object') return;
+
+  const embeddedId = value.id || value.productId || value.product_id || value.pid || '';
+  const explicitLabel = value.name || value.productName || value.product_name || value.title || value.label || '';
+  const mappedLabel = productMap.get(String(embeddedId)) || [...productMap.values()].find(label => sameLabel(label, explicitLabel));
+  const productContext = /product|item|cart|paymentarray|line/i.test(context);
+  const label = mappedLabel || (productContext && explicitLabel && (value.quantity || value.qty || value.price || embeddedId) ? explicitLabel : '');
+  if (label && !PRIVATE_PAYMENT_TEXT.test(String(label))) {
+    output.push({
+      name: candidateNameFromText(label),
+      school: schoolFromText(label),
+      quantity: countQuantity(value.quantity ?? value.qty ?? value.value ?? 1)
+    });
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    if (PRIVATE_PAYMENT_KEY.test(key)) continue;
+    const directLabel = productMap.get(String(key));
+    if (directLabel) {
+      output.push({
+        name: candidateNameFromText(directLabel),
+        school: schoolFromText(directLabel),
+        quantity: countQuantity(child?.quantity ?? child?.qty ?? child?.value ?? child)
+      });
+      continue;
+    }
+    collectProductSelections(child, productMap, output, `${context}.${key}`, depth + 1);
+  }
+}
+
 function voteSelections(submission, productMap) {
   const answers = submission.answers || {};
   const selections = [];
   for (const answer of Object.values(answers)) {
-    const answerText = `${answer.text || ''} ${answer.name || ''}`.toLowerCase();
+    const answerText = `${answer.text || ''} ${answer.name || ''} ${answer.type || ''}`.toLowerCase();
     const raw = answer.answer;
-    // Payment answers normally include product labels and quantities in their answer object.
-    if (!/vote|payment|product/.test(answerText) && !raw) continue;
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      for (const [label, quantity] of Object.entries(raw)) {
-        const productLabel = productMap.get(String(label)) || label;
-        const name = candidateNameFromText(productLabel);
-        if (name) selections.push({ name, school: schoolFromText(productLabel), quantity: countQuantity(quantity?.quantity ?? quantity?.value ?? quantity) });
-      }
-    }
+    if (!/vote|payment|product|candidate|scholarship/.test(answerText)) continue;
+    const answerSelections = [];
+    collectProductSelections(raw, productMap, answerSelections, 'paymentAnswer');
     const pretty = answer.prettyFormat || answer.value || '';
-    if (typeof pretty === 'string' && /[\u2014\u2013-]/.test(pretty)) {
-      for (const item of pretty.split(/\n|<br\s*\/?>|\|/i)) {
-        const name = candidateNameFromText(item);
-        const multiplier = item.match(/(?:x|quantity\s*[:=])\s*(\d+)/i);
-        if (name) selections.push({ name, school: schoolFromText(item), quantity: multiplier ? countQuantity(multiplier[1]) : 1 });
+    if (typeof pretty === 'string') {
+      for (const productLabel of new Set(productMap.values())) {
+        if (!pretty.toLowerCase().includes(String(productLabel).toLowerCase())) continue;
+        const nearby = pretty.slice(Math.max(0, pretty.toLowerCase().indexOf(String(productLabel).toLowerCase())), pretty.toLowerCase().indexOf(String(productLabel).toLowerCase()) + String(productLabel).length + 80);
+        const multiplier = nearby.match(/(?:x|quantity\s*[:=])\s*(\d+)/i);
+        answerSelections.push({ name: candidateNameFromText(productLabel), school: schoolFromText(productLabel), quantity: multiplier ? countQuantity(multiplier[1]) : 1 });
       }
     }
+    const perAnswer = new Map();
+    for (const selection of answerSelections.filter(item => item.name)) {
+      const key = selection.name.toLowerCase();
+      const previous = perAnswer.get(key);
+      if (!previous || selection.quantity > previous.quantity) perAnswer.set(key, selection);
+    }
+    selections.push(...perAnswer.values());
   }
   const merged = new Map();
   for (const selection of selections) {
